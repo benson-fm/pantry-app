@@ -5,6 +5,7 @@ import XSymbol from "./assets/close-svgrepo-com.svg";
 import Image from "next/image";
 import "./page.css";
 import IconButton from "@mui/material/IconButton";
+import { FaSearch } from "react-icons/fa";
 
 import { firestore } from "@/firebase";
 import {
@@ -14,6 +15,7 @@ import {
   Stack,
   TextField,
   Typography,
+  Input,
 } from "@mui/material";
 import {
   collection,
@@ -22,6 +24,8 @@ import {
   getDoc,
   getDocs,
   setDoc,
+  query,
+  where,
 } from "firebase/firestore";
 import { blueGrey } from "@mui/material/colors";
 
@@ -67,6 +71,8 @@ export default function Home() {
   const [openR, setOpenR] = useState(false);
   const [itemName, setItemName] = useState("");
   const [selectedItem, setSelectedItem] = useState(null);
+  const [input, setInput] = useState("")
+  const [results, setResults] = useState([])
 
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
@@ -89,6 +95,36 @@ export default function Home() {
     await updatePantry();
   };
 
+  useEffect(() => {
+    if (input.trim() === "") {
+      setResults([]);
+      return;
+    }
+
+    const fetchResults = async () => {
+      try {
+        const q = query(
+          collection(firestore, "pantry"),
+          where("id", "==", "Pie"),
+          // where("id", "<=", input + "\uf8ff")
+        );
+        const querySnapshot = await getDocs(q);
+        console.log(querySnapshot)
+        const items = [];
+        querySnapshot.forEach((doc) => {
+          items.push({ id: doc.id, ...doc.data() });
+        });
+        console.log(items)
+        setResults(items);
+      } catch (error) {
+        console.error("Error fetching search results: ", error);
+      }
+    };
+    
+    fetchResults();
+  }, [input]);
+
+
   const removeItem = async (item) => {
     const docRef = doc(firestore, "pantry", item);
     const docSnap = await getDoc(docRef);
@@ -102,6 +138,8 @@ export default function Home() {
 
     await updatePantry();
   };
+
+
 
   const updatePantry = async () => {
     const snapshot = collection(firestore, "pantry");
@@ -257,7 +295,12 @@ export default function Home() {
           aria-describedby="modal-modal-description"
         >
           <Box sx={style}>
-            <Stack display="flex" flexDirection="row" justifyContent="space-between" width="100%">
+            <Stack
+              display="flex"
+              flexDirection="row"
+              justifyContent="space-between"
+              width="100%"
+            >
               <Typography id="modal-modal-title" variant="h6" component="h2">
                 Count: {selectedItem.count}
               </Typography>
@@ -271,12 +314,7 @@ export default function Home() {
                   },
                 }}
               >
-                <Image
-                  src={XSymbol}
-                  width={24}
-                  height={24}
-                  alt="Close"
-                />
+                <Image src={XSymbol} width={24} height={24} alt="Close" />
               </IconButton>
             </Stack>
           </Box>
@@ -284,14 +322,110 @@ export default function Home() {
       )}
 
       {/* Add Item Button */}
-      <Box display="flex" flexDirection={"row"} width="800px" justifyContent={"flex-end"} gap={4}>
-        <Button onClick={handleOpen} fontSize="24px" sx={{bgcolor: theme.palette.primary.main, borderRadius: 2, color: "white", height: "50px", width:"100px"}}>
-          Add 
+      <Box
+        display="flex"
+        flexDirection={"row"}
+        width="800px"
+        justifyContent={"flex-end"}
+        gap={4}
+      >
+        <Box
+          bgcolor={"white"}
+          width={"250px"}
+          borderRadius={"10px"}
+          height={"2.5rem"}
+          padding={"0 15px"}
+          display={"flex"}
+          alignItems={"center"}
+          sx={{
+            "&:before": {
+              borderBottom: "none",
+            },
+            "&:hover:not(.Mui-disabled):before": {
+              borderBottom: "none",
+            },
+            "&:after": {
+              borderBottom: "none",
+            },
+          }}
+        >
+          <FaSearch color={theme.palette.primary.main} />
+          <Input
+            sx={{
+              bgcolor: "transparent",
+              border: "none",
+              height: "100%",
+              fontSize: "1rem",
+              width: "100%",
+              marginLeft: "5px",
+              "&:before": {
+                borderBottom: "none",
+              },
+              "&:hover:not(.Mui-disabled):before": {
+                borderBottom: "none",
+              },
+              "&:after": {
+                borderBottom: "none",
+              },
+            }}
+            placeholder="Type to search..."
+            value={input}
+            onChange={(e) => {setInput(e.target.value), console.log(e)}}
+          />
+        </Box>
+        <Button
+          onClick={handleOpen}
+          fontSize="24px"
+          sx={{
+            bgcolor: theme.palette.primary.main,
+            borderRadius: 2,
+            color: "white",
+            height: "2.5rem",
+            width: "100px",
+          }}
+        >
+          Add
         </Button>
-        <Button onClick={handleOpenR} fontSize="24px" sx={{bgcolor: theme.palette.primary.main, borderRadius: 2, color: "white", height: "50px", width:"100px"}}>
-          Remove 
+        <Button
+          onClick={handleOpenR}
+          fontSize="24px"
+          sx={{
+            bgcolor: theme.palette.primary.main,
+            borderRadius: 2,
+            color: "white",
+            height: "2.5rem",
+            width: "100px",
+          }}
+        >
+          Remove
         </Button>
       </Box>
+
+      {results.length > 0 && (
+        <Box
+          width="800px"
+          bgcolor={theme.palette.primary.light}
+          borderRadius={2}
+          mt={2}
+          p={2}
+        >
+          <Typography variant="h6" color="white">
+            Search Results:
+          </Typography>
+          {results.map((result) => (
+            <Box
+              key={result.id}
+              bgcolor={theme.palette.primary.dark}
+              color="white"
+              p={1}
+              mt={1}
+              borderRadius={2}
+            >
+              {result.name}
+            </Box>
+          ))}
+        </Box>
+      )}
     </Box>
   );
 }
